@@ -343,9 +343,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: PlayerBlue
       objectReference: {fileID: 0}
+    - target: {fileID: 7857225672708281822, guid: 2ad3504b0a41edf4393c3350f622f573, type: 3}
+      propertyPath: m_TagString
+      value: Player
+      objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 4177807351054111585, guid: 2ad3504b0a41edf4393c3350f622f573, type: 3}
     - {fileID: 5550170566052042972, guid: 2ad3504b0a41edf4393c3350f622f573, type: 3}
+    - {fileID: 202218566128201232, guid: 2ad3504b0a41edf4393c3350f622f573, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -581,7 +586,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 2
-  jumpForce: 4
+  jumpForce: 5
   dashPower: 8
   dashDuration: 0.2
   dashCooldown: 1

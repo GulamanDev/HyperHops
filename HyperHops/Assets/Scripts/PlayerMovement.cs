@@ -20,6 +20,9 @@ public class PlayerMovement : MonoBehaviour
     //doublejump
     private bool doubleJump = false;
     private float groundDistance = 1.1f;
+    private bool canJump = true;  // New flag to control jump timing
+    private float jumpCooldown = 0.2f; // Time to wait before jump is allowed again
+    private float jumpCooldownTimer = 0f;
 
     //flip
     private bool isFacingRight = true;
@@ -30,10 +33,14 @@ public class PlayerMovement : MonoBehaviour
     private bool isGrounded;
     private bool isDoubleJumping;
     private bool isLanding;
+    private bool isMoving;
+    private bool isFalling;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        am = GetComponent<Animator>(); 
+        am = GetComponent<Animator>();
+
     }
 
     void Update()
@@ -60,6 +67,19 @@ public class PlayerMovement : MonoBehaviour
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
         movement = new Vector3(moveX, 0f, moveZ).normalized * moveSpeed;
+
+        if(moveX != 0f)
+        {
+            am.SetBool("isMoving", true);
+            isMoving = true;
+        }
+        else
+        {
+            am.SetBool("isMoving", false);
+            isMoving = false;
+        }
+
+
         // Check if the object is moving left or right
         if (moveX > 0 && !isFacingRight)
         {
@@ -67,8 +87,9 @@ public class PlayerMovement : MonoBehaviour
         }
         else if (moveX < 0 && isFacingRight)
         {
-            Flip();  // Flip the object to the left
+             Flip();  // Flip the object to the left
         }
+        
     }
 
     private void Move()
@@ -79,47 +100,89 @@ public class PlayerMovement : MonoBehaviour
 
     private void Jump()
     {
-        if (!isGrounded && rb.velocity.y < 0)
+        // Handle the falling animation
+        if (!isGrounded && rb.velocity.y > 0)
         {
-            // Trigger the fall animation
             am.SetBool("isFalling", true);
+            isFalling = true;   
         }
 
+
+        // Reset the jump states when grounded
         if (IsGrounded() && !Input.GetButton("Jump"))
         {
-            
-            doubleJump = false; // Reset double jump when grounded
-            am.SetBool("isGrounded", true);
-            isGrounded = true;
+            if (canJump)  // Allow for jump after cooldown is over
+            {
+                doubleJump = false;  // Reset double jump when grounded
+                am.SetBool("isGrounded", true);
+                isGrounded = true;
 
-            am.SetBool("isJumping", false);
-            isJumping = false;
+                am.SetBool("isJumping", false);
+                isJumping = false;
+            }
         }
 
-        if (Input.GetButtonDown("Jump"))
+        // Start a jump
+        if (Input.GetButtonUp("Jump"))
         {
-            //double jump
+            // Double jump logic
             if (IsGrounded() || !doubleJump)
             {
-                rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                // First jump or double jump logic
+                Debug.Log("Jump");
+                Jumping();
                 am.SetBool("isJumping", true);
                 isJumping = true;
                 am.SetBool("isGrounded", false);
                 isGrounded = false;
+                am.SetBool("isMoving", false);
+                isMoving = false;
+
                 if (!IsGrounded())
                 {
-                    doubleJump = true; // Allow double jump
+                    am.SetBool("isJumping", false);
+                    isJumping = false;
+                    am.SetBool("isDoubleJumping", true);
+                    isDoubleJumping = true;
+                    am.SetBool("isMoving", false);
+                    isMoving = false;
+                    Debug.Log("Double Jump Working");
+                    doubleJump = true;  // Enable double jump
+
                 }
             }
         }
 
+        // Handle the jump cooldown timer
+        if (!IsGrounded() && !canJump)
+        {
+            jumpCooldownTimer += Time.deltaTime;
+            if (jumpCooldownTimer >= jumpCooldown)
+            {
+                canJump = true;  // Allow jumping again after cooldown
+                jumpCooldownTimer = 0f;  // Reset the timer
+            }
+        }
+    }
+
+    // The Jumping function remains the same
+    private void Jumping()
+    {
+        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
     }
 
     private void HandleDash()
     {
         if (Input.GetKeyDown(KeyCode.LeftShift) && canDash)
         {
+            am.SetBool("isDashing", true);
+            isDashing = true;
             StartCoroutine(Dash());
+        }
+        else
+        {
+            am.SetBool("isDashing", false);
+            isDashing = false;
         }
     }
 
