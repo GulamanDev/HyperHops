@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6813867006209762789}
+  - component: {fileID: 5550170566052042972}
   - component: {fileID: 757704986176413120}
-  - component: {fileID: 4177807351054111585}
   - component: {fileID: 6297438857285786425}
   - component: {fileID: 6153079649081344069}
   - component: {fileID: 5465099022669414171}
@@ -37,6 +37,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5550170566052042972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7857225672708281822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2cbce82823aebf42acd8dca99afd361, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveSpeed: 2
+  jumpForce: 4
+  dashPower: 8
+  dashDuration: 0.2
+  dashCooldown: 1
+  trailRenderer: {fileID: 6958494924613763579}
 --- !u!212 &757704986176413120
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -89,27 +107,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &4177807351054111585
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7857225672708281822}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e9f4cd2eb878f0b4abe2e6ce72de92c0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveSpeed: 3
-  jumpForce: 3
-  rb: {fileID: 5465099022669414171}
-  groundDistance: 1.1
-  velocity: 0
-  Dashingpower: 10
-  DashingTime: 0.2
-  DashCooldown: 1
-  tr: {fileID: 6958494924613763579}
 --- !u!95 &6297438857285786425
 Animator:
   serializedVersion: 5
@@ -221,7 +218,7 @@ TrailRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Time: 5
+  m_Time: 0.3
   m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
@@ -230,8 +227,8 @@ TrailRenderer:
       serializedVersion: 2
       m_Curve:
       - serializedVersion: 3
-        time: 0
-        value: 0.35219765
+        time: 0.0111579895
+        value: 0.13836098
         inSlope: 0
         outSlope: 0
         tangentMode: 0

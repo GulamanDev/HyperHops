@@ -50,7 +50,7 @@ public class PlayerController : MonoBehaviour
                 doubleJump = !doubleJump;
             }
         }
-        
+        //jump
         if (Input.GetButtonDown("Jump") && IsGrounded())
         {
             

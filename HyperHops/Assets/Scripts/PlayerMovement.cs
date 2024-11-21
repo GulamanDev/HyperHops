@@ -24,9 +24,16 @@ public class PlayerMovement : MonoBehaviour
     //flip
     private bool isFacingRight = true;
 
+    //animate
+    private Animator am;
+    private bool isJumping;
+    private bool isGrounded;
+    private bool isDoubleJumping;
+    private bool isLanding;
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        am = GetComponent<Animator>(); 
     }
 
     void Update()
@@ -72,22 +79,40 @@ public class PlayerMovement : MonoBehaviour
 
     private void Jump()
     {
+        if (!isGrounded && rb.velocity.y < 0)
+        {
+            // Trigger the fall animation
+            am.SetBool("isFalling", true);
+        }
+
         if (IsGrounded() && !Input.GetButton("Jump"))
         {
+            
             doubleJump = false; // Reset double jump when grounded
+            am.SetBool("isGrounded", true);
+            isGrounded = true;
+
+            am.SetBool("isJumping", false);
+            isJumping = false;
         }
 
         if (Input.GetButtonDown("Jump"))
         {
+            //double jump
             if (IsGrounded() || !doubleJump)
             {
                 rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                am.SetBool("isJumping", true);
+                isJumping = true;
+                am.SetBool("isGrounded", false);
+                isGrounded = false;
                 if (!IsGrounded())
                 {
                     doubleJump = true; // Allow double jump
                 }
             }
         }
+
     }
 
     private void HandleDash()
