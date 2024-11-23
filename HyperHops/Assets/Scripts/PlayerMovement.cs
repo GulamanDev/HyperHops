@@ -68,10 +68,13 @@ public class PlayerMovement : MonoBehaviour
         float moveZ = Input.GetAxis("Vertical");
         movement = new Vector3(moveX, 0f, moveZ).normalized * moveSpeed;
 
-        if(moveX != 0f)
+        if(moveX != 0f && IsGrounded())
         {
+            Debug.Log("Running");
             am.SetBool("isMoving", true);
             isMoving = true;
+            am.SetBool("isJumping", false);
+            isJumping = false;
         }
         else
         {
@@ -101,10 +104,10 @@ public class PlayerMovement : MonoBehaviour
     private void Jump()
     {
         // Handle the falling animation
-        if (!isGrounded && rb.velocity.y > 0)
+        if (!isGrounded && rb.velocity.y < 0)
         {
             am.SetBool("isFalling", true);
-            isFalling = true;   
+            isFalling = true;
         }
 
 
@@ -114,30 +117,37 @@ public class PlayerMovement : MonoBehaviour
             if (canJump)  // Allow for jump after cooldown is over
             {
                 doubleJump = false;  // Reset double jump when grounded
+                Debug.Log("Landed");
                 am.SetBool("isGrounded", true);
                 isGrounded = true;
-
+                am.SetBool("isFalling", false);
+                isFalling = false;
                 am.SetBool("isJumping", false);
-                isJumping = false;
+                isJumping= false;
             }
         }
 
         // Start a jump
         if (Input.GetButtonUp("Jump"))
         {
+
             // Double jump logic
             if (IsGrounded() || !doubleJump)
             {
-                // First jump or double jump logic
+                // First jump 
                 Debug.Log("Jump");
                 Jumping();
+
                 am.SetBool("isJumping", true);
                 isJumping = true;
                 am.SetBool("isGrounded", false);
                 isGrounded = false;
                 am.SetBool("isMoving", false);
                 isMoving = false;
+                am.SetBool("isDoubleJumping", false );
+                isDoubleJumping = false;
 
+                //double jump
                 if (!IsGrounded())
                 {
                     am.SetBool("isJumping", false);
@@ -146,7 +156,7 @@ public class PlayerMovement : MonoBehaviour
                     isDoubleJumping = true;
                     am.SetBool("isMoving", false);
                     isMoving = false;
-                    Debug.Log("Double Jump Working");
+                    Debug.Log("Second Jump Working");
                     doubleJump = true;  // Enable double jump
 
                 }
@@ -169,6 +179,7 @@ public class PlayerMovement : MonoBehaviour
     private void Jumping()
     {
         rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+
     }
 
     private void HandleDash()
@@ -202,7 +213,9 @@ public class PlayerMovement : MonoBehaviour
         {
             dashDirection = transform.forward;
         }
-
+        //deactivates gravity
+        rb.useGravity = false;
+        Debug.Log("DASHING");
         // Apply dash velocity
         rb.velocity = dashDirection * dashPower;
 
@@ -220,6 +233,7 @@ public class PlayerMovement : MonoBehaviour
             trailRenderer.emitting = false;
         }
 
+        rb.useGravity=true; //activate gravity again
         isDashing = false;
 
         // Wait for cooldown
@@ -235,4 +249,5 @@ public class PlayerMovement : MonoBehaviour
         scale.x *= -1;  // Flip the object by changing its scale on the x-axis
         transform.localScale = scale;
     }
+
 }
