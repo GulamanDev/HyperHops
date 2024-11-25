@@ -243,7 +243,22 @@ public class PlayerMovement : MonoBehaviour
         transform.localScale = scale;
     }
 
-    // Attack functionality
+    // Attack
+
+    private void HandleAttack()
+    {
+        if(Input.GetKeyDown(KeyCode.F) && !IsGrounded())
+        {
+            PerformStomp();
+        }
+    }
+
+
+    private void PerformStomp()
+    {
+        rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);
+    }
+        /*
     private void HandleAttack()
     {
         if (Input.GetKeyDown(KeyCode.E) && !isAttacking)
@@ -279,4 +294,5 @@ public class PlayerMovement : MonoBehaviour
         yield return new WaitForSeconds(1f); // Delay between attacks
         isAttacking = false;
     }
+    */
 }
