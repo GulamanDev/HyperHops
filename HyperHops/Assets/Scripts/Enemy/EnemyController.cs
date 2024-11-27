@@ -1,16 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
-    enum State { Roam, Chase, Attack }
+    enum State { Roam, Chase, Attack, Flee }
     private State currentState = State.Roam;
 
     public Transform player;  // The player's transform to track
     public float detectionRange = 10f;  // How far the enemy can detect the player
     public float attackRange = 3f;  // How close the enemy has to get to attack
+    public float fleeRange = 2f;  // How close the player has to get for the enemy to flee
     public float speed = 3f;  // Movement speed
     public float jumpForce = 10f;  // Jump force when attacking
     public float jumpCooldown = 3f;  // Time between jump attacks
@@ -44,6 +42,10 @@ public class EnemyController : MonoBehaviour
             case State.Attack:
                 Attack();
                 break;
+
+            case State.Flee:
+                Flee();
+                break;
         }
 
         // If the enemy is stomping, check if it missed and continue chasing if necessary
@@ -53,6 +55,12 @@ public class EnemyController : MonoBehaviour
             currentState = State.Chase;
             isStomping = false;
             isJumping = false;
+        }
+
+        // Check if the player is directly above the enemy to trigger the flee state
+        if (IsDirectlyAbovePlayer() && IsPlayerAboveThreshold())
+        {
+            currentState = State.Flee;
         }
     }
 
@@ -75,51 +83,71 @@ public class EnemyController : MonoBehaviour
         Vector3 direction = (player.position - transform.position).normalized;
         transform.Translate(direction * speed * Time.deltaTime, Space.World);
 
-        // Check if the enemy is close enough to attack
-        if (Vector3.Distance(transform.position, player.position) < attackRange && timeSinceLastJumpAttack >= jumpCooldown)
+        // Check if the enemy is close enough to attack (within attack range)
+        if (Vector3.Distance(transform.position, player.position) < attackRange)
         {
-            currentState = State.Attack;
+            rb.velocity = Vector3.zero; // Stop movement before jumping
+            currentState = State.Attack;  // Transition to Attack state
         }
         else if (Vector3.Distance(transform.position, player.position) > detectionRange)
         {
-            currentState = State.Roam;
+            currentState = State.Roam; //back to roam state
         }
     }
 
     private void Attack()
     {
-        // Perform a jump attack if the enemy is not already jumping
+        // If the enemy is in attack range and is not already jumping or stomping
         if (!isJumping && !isStomping)
         {
             JumpOnPlayer();
         }
 
-        // Check if the player is directly below the enemy and if we're aligned on the X and Z axes
+        // Check if the player is directly below the enemy
         if (isJumping && IsDirectlyAbovePlayer())
         {
             PerformStomp();
         }
     }
 
+    private void Flee()
+    {
+        // Move away from the player
+        Vector3 fleeDirection = (transform.position - player.position).normalized; 
+        transform.Translate(fleeDirection * speed * Time.deltaTime, Space.World);
+
+        // If the enemy gets far enough from the player, change state fleeing to roaming
+        if (Vector3.Distance(transform.position, player.position) > fleeRange)
+        {
+            currentState = State.Roam;
+        }
+    }
+
     private void JumpOnPlayer()
     {
         isJumping = true;  // Set the enemy as jumping
-        timeSinceLastJumpAttack = 0f;  // Reset jump attack cooldown
+        timeSinceLastJumpAttack = 0f;  // Resets Jump Attack
 
         // Calculate direction to the player
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
 
-        // Apply a force to jump upwards and forward (towards the player)
+        // Apply a force to jump upwards and towards the player
         rb.velocity = new Vector3(directionToPlayer.x * speed, jumpForce, directionToPlayer.z * speed);
     }
 
     private bool IsDirectlyAbovePlayer()
     {
         // Check if the enemy is directly above the player along the X and Z axes
-        // We can define a small tolerance to account for minor floating-point differences
-        float tolerance = 0.5f;  // Adjust this based on how precise you want the "directly above" check to be
+        // Tolerance is how directly above the checker
+        float tolerance = 0.5f; 
         return Mathf.Abs(transform.position.x - player.position.x) < tolerance &&
                Mathf.Abs(transform.position.z - player.position.z) < tolerance;
+    }
+
+    private bool IsPlayerAboveThreshold()
+    {
+        // Check if the player is significantly above the enemy (in the Y axis)
+        return player.position.y > transform.position.y + 1.0f;  // Player is above by at least 1 unit
     }
 
     private void PerformStomp()
@@ -134,18 +162,9 @@ public class EnemyController : MonoBehaviour
             rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);  // Strong downward velocity
         }
     }
-
     private bool IsGrounded()
     {
         // Simple ground check using raycasting (or use a collider's `isGrounded` property)
         return Physics.Raycast(transform.position, Vector3.down, 0.1f);
-    }
-
-    private void DealDamageToPlayer()
-    {
-        // Assuming the player has a health system
-        // Here you would call a method on the player to deal damage or trigger an effect
-        Debug.Log("Enemy stomped on the player!");
-        // Example: player.TakeDamage(10);  // Replace with actual damage logic
     }
 }
