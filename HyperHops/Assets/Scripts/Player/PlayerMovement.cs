@@ -198,7 +198,8 @@ public class PlayerMovement : MonoBehaviour
 
     private bool IsGrounded()
     {
-        return Physics.Raycast(transform.position, Vector3.down, groundDistance);
+        int groundLayerMask = LayerMask.GetMask("Ground"); // Make sure "Ground" layer exists and includes the ground surfaces
+        return Physics.Raycast(transform.position, Vector3.down, groundDistance, groundLayerMask);
     }
 
     private IEnumerator Dash()
@@ -258,41 +259,5 @@ public class PlayerMovement : MonoBehaviour
     {
         rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);
     }
-        /*
-    private void HandleAttack()
-    {
-        if (Input.GetKeyDown(KeyCode.E) && !isAttacking)
-        {
-            StartCoroutine(StompAttack());
-        }
-    }
 
-    private IEnumerator StompAttack()
-    {
-        isAttacking = true;
-        am.SetTrigger("Stomp");  // Trigger stomp animation
-        // Use a short delay before checking for damage (animation timing, etc.)
-        yield return new WaitForSeconds(0.2f);
-
-        // Check for enemies in the stomp range
-        Collider[] enemies = Physics.OverlapSphere(transform.position, stompRange, enemyLayer);
-        foreach (Collider enemy in enemies)
-        {
-            if (enemy.CompareTag("Enemy"))
-            {
-
-                // Apply damage to the enemy
-                EnemyHealth enemyHealth = enemy.GetComponent<EnemyHealth>();
-                if (enemyHealth != null)
-                {
-                    enemyHealth.TakeDamage(stompDamage);
-                }
-            }
-        }
-
-        // Allow attacking again after a short delay
-        yield return new WaitForSeconds(1f); // Delay between attacks
-        isAttacking = false;
-    }
-    */
 }
