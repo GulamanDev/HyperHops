@@ -75,7 +75,6 @@ public class PlayerMovement : MonoBehaviour
 
         if (moveX != 0f && IsGrounded())
         {
-            Debug.Log("Running");
             am.SetBool("isMoving", true);
             isMoving = true;
             am.SetBool("isJumping", false);
