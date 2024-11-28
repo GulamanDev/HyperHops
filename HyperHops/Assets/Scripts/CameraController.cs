@@ -1,74 +1,51 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Photon.Pun;
 
 public class CameraController : MonoBehaviour
 {
-    public Transform[] players;
-    public float minZoom = 40f;
-    public float maxZoom = 10f;
-    public float zoomLimiter = 50f;
-    public float smoothSpeed = 0.5f;
+    public Vector3 offset = new Vector3(0, 2, -10); // Adjust as needed
+    public float smoothSpeed = 5f; // Smoothing speed
 
-    private Vector3 offset;
-    private Camera cam;
+    private Transform target;
 
     void Start()
     {
-        cam = GetComponent<Camera>();
-        offset = transform.position - GetCenterPoint();
+        foreach (GameObject player in GameObject.FindGameObjectsWithTag("Player"))
+        {
+            PhotonView photonView = player.GetComponent<PhotonView>();
+            if (photonView != null && photonView.IsMine)
+            {
+                target = player.transform;
+                Debug.Log("Camera attached to: " + player.name);
+                break;
+            }
+        }
+    }
+
+    void Update()
+    {
+        if (target == null)
+        {
+            foreach (GameObject player in GameObject.FindGameObjectsWithTag("Player"))
+            {
+                PhotonView photonView = player.GetComponent<PhotonView>();
+                if (photonView != null && photonView.IsMine)
+                {
+                    target = player.transform;
+                    break;
+                }
+            }
+        }
     }
 
     void LateUpdate()
     {
-        if (players.Length == 0) return;
+        if (target == null) return;
 
-        MoveCamera();
-
-        ZoomCamera();
-    }
-
-    void MoveCamera()
-    {
-        Vector3 centerPoint = GetCenterPoint();
-        Vector3 newPosition = centerPoint + offset;
-
-        transform.position = Vector3.Lerp(transform.position, newPosition, smoothSpeed * Time.deltaTime);
-    }
-
-    void ZoomCamera()
-    {
-        float greatestDistance = GetGreatestDistance();
-
-        float newZoom = Mathf.Lerp(maxZoom, minZoom, greatestDistance / zoomLimiter);
-
-        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, newZoom, smoothSpeed * Time.deltaTime);
-    }
-
-    Vector3 GetCenterPoint()
-    {
-        if (players.Length == 1)
-        {
-            return players[0].position;
-        }
-
-        var bounds = new Bounds(players[0].position, Vector3.zero);
-        for (int i = 1; i < players.Length; i++)
-        {
-            bounds.Encapsulate(players[i].position);
-        }
-
-        return bounds.center;
-    }
-
-    float GetGreatestDistance()
-    {
-        var bounds = new Bounds(players[0].position, Vector3.zero);
-        for (int i = 1; i < players.Length; i++)
-        {
-            bounds.Encapsulate(players[i].position);
-        }
-
-        return bounds.size.x > bounds.size.z ? bounds.size.x : bounds.size.z;
+        // Smoothly move the camera towards the target position
+        Vector3 desiredPosition = target.position + offset;
+        transform.position = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
     }
 }

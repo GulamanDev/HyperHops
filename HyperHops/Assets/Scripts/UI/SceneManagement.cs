@@ -6,9 +6,13 @@ using UnityEngine.SceneManagement;
 public class SceneManagement : MonoBehaviour
 {
 
-    public void LoadScene(string sceneName)
+    public void SingleScene(string sceneName)
     {
         SceneManager.LoadScene("SampleScene");
+    }
+    public void MultiplayerScene(string sceneName)
+    {
+        SceneManager.LoadScene("Lobby");
     }
 
     public void Quit()
@@ -17,7 +21,7 @@ public class SceneManagement : MonoBehaviour
 
 
         //FOR TESTING IN EDITOR ONLY
-        UnityEditor.EditorApplication.isPlaying = false;
+        //UnityEditor.EditorApplication.isPlaying = false;
     }
     // Start is called before the first frame update
     void Start()

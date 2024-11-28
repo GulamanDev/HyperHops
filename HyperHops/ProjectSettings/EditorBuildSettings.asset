@@ -11,4 +11,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/Lobby.unity
+    guid: 7b04c3c095ce219458941da0754288a4
+  - enabled: 0
+    path: Assets/Scenes/LevDes.unity
+    guid: 1a8b9f61306f35b43a5623243080eee8
   m_configObjects: {}

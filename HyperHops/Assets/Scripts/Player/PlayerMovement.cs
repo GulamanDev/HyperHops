@@ -2,7 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-public class PlayerMovement : MonoBehaviour
+using Photon.Pun;
+public class PlayerMovement : MonoBehaviourPun
 {
     [SerializeField] private float moveSpeed = 5f; // Speed of the player
     [SerializeField] private float jumpForce = 5f; // Force of the jump
@@ -47,21 +48,40 @@ public class PlayerMovement : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         am = GetComponent<Animator>();
+
+        if (PhotonNetwork.IsConnected && PhotonView.Get(this).IsMine)
+        {
+            // Assign the local player's Transform to the TagObject
+            PhotonNetwork.LocalPlayer.TagObject = this.transform;
+        }
+    }
+
+    void Awake()
+    {
+        if (am == null)
+        {
+            am = GetComponent<Animator>();
+        }
     }
 
     void Update()
     {
-        if (isDashing) return;
+        if (photonView.IsMine)
+        {
+            if (isDashing) return;
 
-        Movement();
-        Jump();
-        HandleDash();
-        HandleAttack(); // Call the attack function
+            Movement();
+            Jump();
+            HandleDash();
+            HandleAttack(); // Call the attack function
+
+            SyncAnimationState();
+        }
     }
 
     void FixedUpdate()
     {
-        if (!isDashing)
+        if (photonView.IsMine && !isDashing) // Only move if this is the local player's object
         {
             Move();
         }
@@ -94,6 +114,7 @@ public class PlayerMovement : MonoBehaviour
         {
             Flip();
         }
+
     }
 
     private void Move()
@@ -237,9 +258,25 @@ public class PlayerMovement : MonoBehaviour
 
     private void Flip()
     {
-        isFacingRight = !isFacingRight;
+        // Only flip for the owning player
+        if (photonView.IsMine)
+        {
+            isFacingRight = !isFacingRight;
+            Vector3 scale = transform.localScale;
+            scale.x *= -1;
+            transform.localScale = scale;
+
+            // Notify other players to flip via RPC
+            photonView.RPC("SyncFlip", RpcTarget.OthersBuffered, isFacingRight);
+        }
+    }
+
+    [PunRPC]
+    private void SyncFlip(bool flip)
+    {
+        isFacingRight = flip;
         Vector3 scale = transform.localScale;
-        scale.x *= -1;
+        scale.x = Mathf.Abs(scale.x) * (flip ? 1 : -1);
         transform.localScale = scale;
     }
 
@@ -247,7 +284,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleAttack()
     {
-        if(Input.GetKeyDown(KeyCode.F) && !IsGrounded())
+        if (Input.GetKeyDown(KeyCode.F) && !IsGrounded())
         {
             PerformStomp();
         }
@@ -257,6 +294,26 @@ public class PlayerMovement : MonoBehaviour
     private void PerformStomp()
     {
         rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);
+    }
+
+    private void SyncAnimationState()
+    {
+        bool isJumpingState = am.GetBool("isJumping");
+        bool isFallingState = am.GetBool("isFalling");
+        bool isMovingState = am.GetBool("isMoving");
+
+        // Notify others of the animation state changes
+        photonView.RPC("SyncAnimation", RpcTarget.OthersBuffered, isJumpingState, isFallingState, isMovingState);
+    }
+
+    [PunRPC]
+    private void SyncAnimation(bool isJumping, bool isFalling, bool isMoving)
+    {
+        Debug.Log("Syncing Animation - Jumping: " + isJumping + ", Falling: " + isFalling + ", Moving: " + isMoving);
+        // Update animation parameters on remote clients
+        am.SetBool("isJumping", isJumping);
+        am.SetBool("isFalling", isFalling);
+        am.SetBool("isMoving", isMoving);
     }
 
 }
