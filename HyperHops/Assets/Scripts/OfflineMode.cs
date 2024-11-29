@@ -16,6 +16,6 @@ public class OfflineModeManager : MonoBehaviour
     {
         Vector3 spawnPosition = new Vector3(Random.Range(-5f, 5f), 0, Random.Range(-5f, 5f));
 
-        PhotonNetwork.Instantiate("PlayerPrefab", spawnPosition, Quaternion.identity);
+        PhotonNetwork.Instantiate("Blue", spawnPosition, Quaternion.identity);
     }
 }

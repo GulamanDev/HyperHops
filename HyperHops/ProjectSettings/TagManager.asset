@@ -10,6 +10,7 @@ TagManager:
   - Bullet
   - PlayerHurtBox
   - EnemyHitBox
+  - Ground
   layers:
   - Default
   - TransparentFX
