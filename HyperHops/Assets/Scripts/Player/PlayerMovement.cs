@@ -236,10 +236,7 @@ public class PlayerMovement : MonoBehaviourPun
         {
             dashDirection = transform.right;
         }
-        else
-        {
-            dashDirection = -transform.right;   
-        }
+
 
         rb.useGravity = false;
         Debug.Log("DASHING");

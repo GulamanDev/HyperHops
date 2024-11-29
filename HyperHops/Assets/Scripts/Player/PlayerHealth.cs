@@ -10,7 +10,7 @@ public class PlayerHealth : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         Debug.Log("Triggered by " + other.gameObject.name);
-        if (other.CompareTag("EnemyHurtBox"))
+        if (other.CompareTag("EnemyHitBox"))
         {
             TakeDamage(damage);
         }
