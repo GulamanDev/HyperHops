@@ -5,67 +5,96 @@ using UnityEngine;
 public class GameManager : MonoBehaviourPunCallbacks
 {
     public Transform[] spawnPoints; // Array of spawn points for players
-    private bool[] spawnPointOccupied; // Tracks whether a spawn point is occupied
 
     private void Start()
     {
-        spawnPointOccupied = new bool[spawnPoints.Length];
-
         if (PhotonNetwork.IsConnectedAndReady)
         {
+            // Master client initializes the room properties
+            if (PhotonNetwork.IsMasterClient)
+            {
+                InitializeSpawnPoints();
+            }
+
+            // Wait for room properties to sync and then spawn player
             SpawnPlayer();
+        }
+    }
+
+    void InitializeSpawnPoints()
+    {
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey("OccupiedSpawnPoints"))
+        {
+            bool[] initialSpawnPointOccupied = new bool[spawnPoints.Length];
+            PhotonNetwork.CurrentRoom.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
+            {
+                { "OccupiedSpawnPoints", initialSpawnPointOccupied }
+            });
+
+            Debug.Log("Initialized OccupiedSpawnPoints in room properties.");
         }
     }
 
     void SpawnPlayer()
     {
-        for (int i = 0; i < spawnPoints.Length; i++)
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("OccupiedSpawnPoints", out object occupiedPoints))
         {
-            if (!spawnPointOccupied[i]) // Find an unoccupied spawn point
+            bool[] spawnPointOccupied = (bool[])occupiedPoints;
+
+            for (int i = 0; i < spawnPoints.Length; i++)
             {
-                Transform spawnPoint = spawnPoints[i];
-                spawnPointOccupied[i] = true; // Mark spawn point as occupied
+                if (!spawnPointOccupied[i]) // Find an unoccupied spawn point
+                {
+                    Transform spawnPoint = spawnPoints[i];
+                    spawnPointOccupied[i] = true; // Mark spawn point as occupied
 
-                // Determine the prefab to use based on the player
-                string prefabName = GetPlayerPrefabName();
-                PhotonNetwork.Instantiate(prefabName, spawnPoint.position, spawnPoint.rotation);
+                    // Update the shared room property
+                    PhotonNetwork.CurrentRoom.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
+                    {
+                        { "OccupiedSpawnPoints", spawnPointOccupied }
+                    });
 
-                PhotonNetwork.LocalPlayer.CustomProperties["SpawnIndex"] = i; // Store player's spawn index
-                return;
+                    // Instantiate the player prefab at the spawn point
+                    PhotonNetwork.Instantiate("Blue", spawnPoint.position, spawnPoint.rotation);
+
+                    // Store the spawn index in the player's custom properties
+                    PhotonNetwork.LocalPlayer.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
+                    {
+                        { "SpawnIndex", i }
+                    });
+
+                    return;
+                }
             }
+
+            Debug.LogError("No available spawn points!");
         }
-
-        Debug.LogError("No available spawn points!");
-    }
-
-    string GetPlayerPrefabName()
-    {
-        // Example logic for four different prefabs based on ActorNumber
-        int actorNumber = PhotonNetwork.LocalPlayer.ActorNumber;
-        switch (actorNumber % 4)
+        else
         {
-            case 0:
-                return "Blue";
-            case 1:
-                return "Red";
-            case 2:
-                return "Green";
-            case 3:
-                return "Yellow";
-            default:
-                return "Blue"; // Default to "Blue" if something goes wrong
+            Debug.LogError("OccupiedSpawnPoints not found in room properties. Retrying...");
+            Invoke(nameof(SpawnPlayer), 0.5f); // Retry after a short delay
         }
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
-        // Free up the spawn point used by the player who left
         if (otherPlayer.CustomProperties.TryGetValue("SpawnIndex", out object index))
         {
             int spawnIndex = (int)index;
-            if (spawnIndex >= 0 && spawnIndex < spawnPoints.Length)
+
+            if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue("OccupiedSpawnPoints", out object occupiedPoints))
             {
-                spawnPointOccupied[spawnIndex] = false;
+                bool[] spawnPointOccupied = (bool[])occupiedPoints;
+                if (spawnIndex >= 0 && spawnIndex < spawnPoints.Length)
+                {
+                    spawnPointOccupied[spawnIndex] = false; // Mark the spawn point as free
+
+                    // Update the shared room property
+                    PhotonNetwork.CurrentRoom.SetCustomProperties(new ExitGames.Client.Photon.Hashtable
+                    {
+                        { "OccupiedSpawnPoints", spawnPointOccupied }
+                    });
+                }
             }
         }
     }

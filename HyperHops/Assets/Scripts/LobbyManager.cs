@@ -59,7 +59,7 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     public override void OnJoinedRoom()
     {
         statusText.text = $"Joined Room: {PhotonNetwork.CurrentRoom.Name}";
-        PhotonNetwork.LoadLevel("SampleScene"); // Replace with game scene name.
+        PhotonNetwork.LoadLevel("LevDes"); // Replace with game scene name.
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)

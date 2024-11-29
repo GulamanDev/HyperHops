@@ -1,4 +1,5 @@
 using UnityEngine;
+using Photon.Pun;
 
 public class EnemyController : MonoBehaviour
 {
@@ -23,10 +24,14 @@ public class EnemyController : MonoBehaviour
     private void Start()
     {
         rb = GetComponent<Rigidbody>();  // Get the Rigidbody component
+
+        AssignNearestPlayer();
     }
 
     private void Update()
     {
+        if(!PhotonNetwork.IsMasterClient) return; // Only the master client controls AI
+
         timeSinceLastJumpAttack += Time.deltaTime;  // Increment the time since the last jump attack
 
         switch (currentState)
@@ -63,6 +68,24 @@ public class EnemyController : MonoBehaviour
             currentState = State.Flee;
         }
     }
+
+    private void AssignNearestPlayer()
+    {
+        // Find the nearest player on the network
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        float closestDistance = Mathf.Infinity;
+
+        foreach (GameObject Player in players)
+        {
+            float distance = Vector3.Distance(transform.position, player.transform.position);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                player = player.transform;
+            }
+        }
+    }
+
 
     private void Roam()
     {
@@ -166,5 +189,10 @@ public class EnemyController : MonoBehaviour
     {
         // Simple ground check using raycasting (or use a collider's `isGrounded` property)
         return Physics.Raycast(transform.position, Vector3.down, 0.1f);
+    }
+
+    public static void SpawnEnemy(Vector3 position)
+    {
+        PhotonNetwork.Instantiate("EnemyPrefab", position, Quaternion.identity);
     }
 }
