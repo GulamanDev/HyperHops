@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 public class PlayerMovement : MonoBehaviour
@@ -39,6 +41,7 @@ public class PlayerMovement : MonoBehaviour
     private bool isLanding;
     private bool isMoving;
     private bool isFalling;
+    private bool isDamage;
 
     // Attack variables
     private bool isAttacking = false; // Prevent multiple attacks at once
@@ -57,6 +60,8 @@ public class PlayerMovement : MonoBehaviour
         Jump();
         HandleDash();
         HandleAttack(); // Call the attack function
+
+
     }
 
     void FixedUpdate()
@@ -145,6 +150,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (IsGrounded())
             {
+
                 Debug.Log("Jump");
                 PerformJump();
                 am.SetBool("isJumping", true);
@@ -209,7 +215,11 @@ public class PlayerMovement : MonoBehaviour
         Vector3 dashDirection = movement.normalized;
         if (dashDirection.magnitude < 0.1f)
         {
-            dashDirection = transform.forward;
+            dashDirection = transform.right;
+        }
+        else
+        {
+            dashDirection = -transform.right;   
         }
 
         rb.useGravity = false;
@@ -247,9 +257,13 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleAttack()
     {
+        
         if(Input.GetKeyDown(KeyCode.F) && !IsGrounded())
         {
             PerformStomp();
+            am.SetBool("isDamage", true);
+
+
         }
     }
 
@@ -257,6 +271,8 @@ public class PlayerMovement : MonoBehaviour
     private void PerformStomp()
     {
         rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);
+
     }
+
 
 }
