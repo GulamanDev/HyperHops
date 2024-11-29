@@ -43,6 +43,7 @@ public class PlayerMovement : MonoBehaviourPun
     private bool isMoving;
     private bool isFalling;
     private bool isDamage;
+    private bool isStomping;
 
     // Attack variables
     private bool isAttacking = false; // Prevent multiple attacks at once
@@ -293,9 +294,11 @@ public class PlayerMovement : MonoBehaviourPun
         if(Input.GetKeyDown(KeyCode.F) && !IsGrounded())
         {
             PerformStomp();
-            am.SetBool("isDamage", true);
-
-
+            am.SetBool("isStomping", true);
+        }
+        else
+        {
+            am.SetBool("isStomping", false);
         }
     }
 

@@ -30,6 +30,7 @@ public class EnemyController : MonoBehaviour
     private bool isFalling;
     private bool isDamage;
 
+
     // Flip variables
     private bool isFacingRight = true;
 
@@ -111,15 +112,15 @@ public class EnemyController : MonoBehaviour
         Vector3 forwardMovement = new Vector3(transform.forward.x, 0, 0) * roamSpeed * Time.deltaTime; 
         transform.Translate(forwardMovement, Space.Self);
 
-        am.SetBool("isMoving", true);
-        isMoving = true;
+
         // Check if the player is within detection range
         if (Vector3.Distance(transform.position, player.position) < detectionRange)
         {
             currentState = State.Chase;
-            am.SetBool("isMoving", true);
-            isMoving = true;
+
         }
+
+
 
         Flip();
     }
@@ -187,7 +188,7 @@ public class EnemyController : MonoBehaviour
             am.SetBool("isGrounded", false);
             am.SetBool("isMoving", false);
         }
-        else if(IsGrounded())
+        if (IsGrounded())
         {
             am.SetBool("isMoving", true);
             Debug.Log("Character on ground");
@@ -197,9 +198,15 @@ public class EnemyController : MonoBehaviour
         // Check if the player is directly below the enemy
         if (isJumping && IsDirectlyAbovePlayer())
         {
-            PerformStomp();
-            am.SetBool("isDamage", true);
-
+            PerformStomp(); 
+            am.SetBool("isStomping", true);
+            isStomping = true;
+        }
+        else
+        {
+            am.SetBool("isStomping", false);
+            am.SetBool("isMoving", true);
+            isStomping = false;
         }
     }
 
@@ -256,6 +263,7 @@ public class EnemyController : MonoBehaviour
             // Immediately apply a very strong downward force to simulate the stomp impact
             rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);  // Strong downward velocity
         }
+    
     }
     private bool IsGrounded()
     {
