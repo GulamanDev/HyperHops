@@ -21,11 +21,23 @@ public class EnemyController : MonoBehaviour
     private float stompStartTime = 0f;  // Time when stomp was initiated
     private Rigidbody rb;  // Reference to the Rigidbody component
 
+    // Animation variables
+    private Animator am;
+    private bool isGrounded;
+    private bool isDoubleJumping;
+    private bool isLanding;
+    private bool isMoving;
+    private bool isFalling;
+    private bool isDamage;
+
+    // Flip variables
+    private bool isFacingRight = true;
+
+
     private void Start()
     {
-        rb = GetComponent<Rigidbody>();  // Get the Rigidbody component
-
-        AssignNearestPlayer();
+        rb = GetComponent<Rigidbody>();
+        am = GetComponent<Animator>();
     }
 
     private void Update()
@@ -67,6 +79,9 @@ public class EnemyController : MonoBehaviour
         {
             currentState = State.Flee;
         }
+
+        IsFalling();
+
     }
 
     private void AssignNearestPlayer()
@@ -89,32 +104,76 @@ public class EnemyController : MonoBehaviour
 
     private void Roam()
     {
+
         // Random roaming behavior (can also use predefined points if needed)
         float roamSpeed = speed * 0.5f;  // Slower roaming speed
-        transform.Translate(Vector3.forward * roamSpeed * Time.deltaTime, Space.Self);
 
+        Vector3 forwardMovement = new Vector3(transform.forward.x, 0, 0) * roamSpeed * Time.deltaTime; 
+        transform.Translate(forwardMovement, Space.Self);
+
+        am.SetBool("isMoving", true);
+        isMoving = true;
         // Check if the player is within detection range
         if (Vector3.Distance(transform.position, player.position) < detectionRange)
         {
             currentState = State.Chase;
+            am.SetBool("isMoving", true);
+            isMoving = true;
         }
+
+        Flip();
     }
 
+    private void IsFalling()
+    {
+        // Check if the character is falling (y velocity is negative)
+        if (rb.velocity.y < 0 && !IsGrounded())
+        {
+
+            am.SetBool("isFalling", true);
+            am.SetBool("isJumping", false);
+            am.SetBool("isGrounded", false);
+            am.SetBool("isMoving", false);
+        }
+        else
+        {
+            am.SetBool("isFalling", false);
+            am.SetBool("isGrounded", true);
+        }
+
+    }
+
+    private void GroundChecker()
+    {
+        if (IsGrounded())
+        {
+            
+            am.SetBool("isGrounded", true);
+            am.SetBool("isFalling", false);
+
+        }
+    }
     private void Chase()
     {
         // Move towards the player
         Vector3 direction = (player.position - transform.position).normalized;
+
+        direction.z = 0; // no movement z axis
         transform.Translate(direction * speed * Time.deltaTime, Space.World);
 
+        am.SetBool("isMoving", true);
+        isMoving = true;
+
+        Flip();
         // Check if the enemy is close enough to attack (within attack range)
         if (Vector3.Distance(transform.position, player.position) < attackRange)
         {
-            rb.velocity = Vector3.zero; // Stop movement before jumping
-            currentState = State.Attack;  // Transition to Attack state
+            rb.velocity = Vector3.zero; 
+            currentState = State.Attack; 
         }
         else if (Vector3.Distance(transform.position, player.position) > detectionRange)
         {
-            currentState = State.Roam; //back to roam state
+            currentState = State.Roam; 
         }
     }
 
@@ -124,12 +183,23 @@ public class EnemyController : MonoBehaviour
         if (!isJumping && !isStomping)
         {
             JumpOnPlayer();
+            am.SetBool("isJumping", true);
+            am.SetBool("isGrounded", false);
+            am.SetBool("isMoving", false);
+        }
+        else if(IsGrounded())
+        {
+            am.SetBool("isMoving", true);
+            Debug.Log("Character on ground");
+            GroundChecker();
         }
 
         // Check if the player is directly below the enemy
         if (isJumping && IsDirectlyAbovePlayer())
         {
             PerformStomp();
+            am.SetBool("isDamage", true);
+
         }
     }
 
@@ -156,6 +226,8 @@ public class EnemyController : MonoBehaviour
 
         // Apply a force to jump upwards and towards the player
         rb.velocity = new Vector3(directionToPlayer.x * speed, jumpForce, directionToPlayer.z * speed);
+
+
     }
 
     private bool IsDirectlyAbovePlayer()
@@ -188,7 +260,27 @@ public class EnemyController : MonoBehaviour
     private bool IsGrounded()
     {
         // Simple ground check using raycasting (or use a collider's `isGrounded` property)
-        return Physics.Raycast(transform.position, Vector3.down, 0.1f);
+        return Physics.Raycast(transform.position, Vector3.down, 0.2f);
+
+    }
+
+    private void Flip()
+    {
+        // Flip the character when it changes direction
+        if (rb.velocity.x > 0 && !isFacingRight)
+        {
+            isFacingRight = true;
+            Vector3 scale = transform.localScale;
+            scale.x *= -1;
+            transform.localScale = scale;
+        }
+        else if (rb.velocity.x < 0 && isFacingRight)
+        {
+            isFacingRight = false;
+            Vector3 scale = transform.localScale;
+            scale.x *= -1;
+            transform.localScale = scale;
+        }
     }
 
     public static void SpawnEnemy(Vector3 position)

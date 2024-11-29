@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
@@ -40,6 +42,7 @@ public class PlayerMovement : MonoBehaviourPun
     private bool isLanding;
     private bool isMoving;
     private bool isFalling;
+    private bool isDamage;
 
     // Attack variables
     private bool isAttacking = false; // Prevent multiple attacks at once
@@ -166,6 +169,7 @@ public class PlayerMovement : MonoBehaviourPun
         {
             if (IsGrounded())
             {
+
                 Debug.Log("Jump");
                 PerformJump();
                 am.SetBool("isJumping", true);
@@ -230,7 +234,11 @@ public class PlayerMovement : MonoBehaviourPun
         Vector3 dashDirection = movement.normalized;
         if (dashDirection.magnitude < 0.1f)
         {
-            dashDirection = transform.forward;
+            dashDirection = transform.right;
+        }
+        else
+        {
+            dashDirection = -transform.right;   
         }
 
         rb.useGravity = false;
@@ -284,9 +292,13 @@ public class PlayerMovement : MonoBehaviourPun
 
     private void HandleAttack()
     {
-        if (Input.GetKeyDown(KeyCode.F) && !IsGrounded())
+        
+        if(Input.GetKeyDown(KeyCode.F) && !IsGrounded())
         {
             PerformStomp();
+            am.SetBool("isDamage", true);
+
+
         }
     }
 
@@ -294,6 +306,7 @@ public class PlayerMovement : MonoBehaviourPun
     private void PerformStomp()
     {
         rb.velocity = new Vector3(rb.velocity.x, -20f, rb.velocity.z);
+
     }
 
     private void SyncAnimationState()
