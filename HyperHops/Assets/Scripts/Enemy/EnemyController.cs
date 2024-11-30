@@ -4,7 +4,7 @@ using UnityEngine.AI;
 using System.Collections.Generic;
 using TMPro.Examples;
 
-public class EnemyController : MonoBehaviour
+public class EnemyController : MonoBehaviour, IPunObservable
 {
     enum State { Roam, Chase, Attack, Flee }
     private State currentState = State.Roam;
@@ -44,37 +44,51 @@ public class EnemyController : MonoBehaviour
     // NavMesh Agent reference
     private NavMeshAgent navMeshAgent;
 
+    private Vector3 networkPosition;
+    private Quaternion networkRotation;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         am = GetComponent<Animator>();
         navMeshAgent = GetComponent<NavMeshAgent>();
         navMeshAgent.angularSpeed = 0f;
+
+        if (!PhotonNetwork.IsMasterClient)
+        {
+            navMeshAgent.enabled = false; // Disable NavMeshAgent on non-master clients
+        }
+
     }
 
     private void Update()
     {
-        if(!PhotonNetwork.IsMasterClient) return; // Only the master client controls AI
-
-        timeSinceLastJumpAttack += Time.deltaTime;  // Increment the time since the last jump attack
-
-        switch (currentState)
+        if (PhotonNetwork.IsMasterClient)
         {
-            case State.Roam:
-                Roam();
-                break;
+            // Master Client controls AI behavior
+            timeSinceLastJumpAttack += Time.deltaTime;
 
-            case State.Chase:
-                Chase();
-                break;
-
-            case State.Attack:
-                Attack();
-                break;
-
-            case State.Flee:
-                Flee();
-                break;
+            switch (currentState)
+            {
+                case State.Roam:
+                    Roam();
+                    break;
+                case State.Chase:
+                    Chase();
+                    break;
+                case State.Attack:
+                    Attack();
+                    break;
+                case State.Flee:
+                    Flee();
+                    break;
+            }
+        }
+        else
+        {
+            // Non-master clients interpolate position and rotation
+            transform.position = Vector3.Lerp(transform.position, networkPosition, Time.deltaTime * 10f);
+            transform.rotation = Quaternion.Lerp(transform.rotation, networkRotation, Time.deltaTime * 10f);
         }
 
 
@@ -96,6 +110,37 @@ public class EnemyController : MonoBehaviour
 
         IsFalling();
 
+    }
+
+    private void UpdateAI()
+    {
+        // AI logic (e.g., roaming, chasing, etc.)
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.SetDestination(GetTargetPosition()); // Example destination
+        }
+    }
+
+    private Vector3 GetTargetPosition()
+    {
+        // Replace with your target logic
+        return Vector3.zero; // Example target position
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            // Master Client sends position and rotation
+            stream.SendNext(transform.position);
+            stream.SendNext(transform.rotation);
+        }
+        else
+        {
+            // Other clients receive position and rotation
+            networkPosition = (Vector3)stream.ReceiveNext();
+            networkRotation = (Quaternion)stream.ReceiveNext();
+        }
     }
 
     private void AssignNearestPlayer()
@@ -395,10 +440,10 @@ private bool IsGrounded()
     
     }
 
-
-
     public static void SpawnEnemy(Vector3 position)
     {
         PhotonNetwork.Instantiate("EnemyPrefab", position, Quaternion.identity);
     }
+
+
 }
