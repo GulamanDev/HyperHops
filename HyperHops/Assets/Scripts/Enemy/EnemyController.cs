@@ -66,6 +66,8 @@ public class EnemyController : MonoBehaviour
                 break;
         }
 
+
+
         // If the enemy is stomping, check if it missed and continue chasing if necessary
         if (isStomping && Time.time - stompStartTime > missTimeLimit)
         {
@@ -128,13 +130,14 @@ public class EnemyController : MonoBehaviour
     private void IsFalling()
     {
         // Check if the character is falling (y velocity is negative)
-        if (rb.velocity.y < 0 && !IsGrounded())
+        if (rb.velocity.y < 0)
         {
-
+            Debug.Log("FALLING");
             am.SetBool("isFalling", true);
             am.SetBool("isJumping", false);
             am.SetBool("isGrounded", false);
             am.SetBool("isMoving", false);
+            isGrounded = false;
         }
         else
         {
@@ -142,17 +145,6 @@ public class EnemyController : MonoBehaviour
             am.SetBool("isGrounded", true);
         }
 
-    }
-
-    private void GroundChecker()
-    {
-        if (IsGrounded())
-        {
-            
-            am.SetBool("isGrounded", true);
-            am.SetBool("isFalling", false);
-
-        }
     }
     private void Chase()
     {
@@ -163,6 +155,7 @@ public class EnemyController : MonoBehaviour
         transform.Translate(direction * speed * Time.deltaTime, Space.World);
 
         am.SetBool("isMoving", true);
+        am.SetBool("isGrounded", false);
         isMoving = true;
 
         Flip();
@@ -187,12 +180,13 @@ public class EnemyController : MonoBehaviour
             am.SetBool("isJumping", true);
             am.SetBool("isGrounded", false);
             am.SetBool("isMoving", false);
+            isGrounded= false;
         }
         if (IsGrounded())
         {
-            am.SetBool("isMoving", true);
-            Debug.Log("Character on ground");
-            GroundChecker();
+            am.SetBool("isMoving", true);         
+            am.SetBool("isJumping", false);
+
         }
 
         // Check if the player is directly below the enemy
@@ -200,6 +194,9 @@ public class EnemyController : MonoBehaviour
         {
             PerformStomp(); 
             am.SetBool("isStomping", true);
+            am.SetBool("isJumping", false);
+            am.SetBool("isFalling", false);
+            am.SetBool("isGrounded", false);
             isStomping = true;
         }
         else
@@ -267,9 +264,26 @@ public class EnemyController : MonoBehaviour
     }
     private bool IsGrounded()
     {
-        // Simple ground check using raycasting (or use a collider's `isGrounded` property)
-        return Physics.Raycast(transform.position, Vector3.down, 0.2f);
+        Debug.Log("Detects the ground ");
 
+        // Set the raycast origin just below the enemy's position (use the collider's bounds center minus half the height)
+        Vector3 rayOrigin = transform.position - new Vector3(0, 0.5f, 0);  // Adjust to cast just below the enemy
+        Vector3 rayDirection = Vector3.down;
+
+        // Length of the raycast
+        float rayLength = 0.5f;
+
+        // Draw the ray in the Scene view in red (for debugging)
+        Debug.DrawRay(rayOrigin, rayDirection * rayLength, Color.red);
+
+        // If the enemy is jumping, return false to prevent false ground detection while in the air
+        if (isJumping || isStomping)
+        {
+            return false;
+        }
+
+        // Simple ground check using raycasting
+        return Physics.Raycast(rayOrigin, rayDirection, rayLength);
     }
 
     private void Flip()

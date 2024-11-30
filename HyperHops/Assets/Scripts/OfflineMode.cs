@@ -9,7 +9,7 @@ public class OfflineModeManager : MonoBehaviour
 
         PhotonNetwork.JoinOrCreateRoom("OfflineRoom", new Photon.Realtime.RoomOptions(), null);
 
-        SpawnPlayer();
+       // SpawnPlayer();
     }
 
     void SpawnPlayer()
