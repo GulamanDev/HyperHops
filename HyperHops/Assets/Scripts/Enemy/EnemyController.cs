@@ -36,6 +36,7 @@ public class EnemyController : MonoBehaviour, IPunObservable
 
     // Flip variables
     private bool isFacingRight = true;
+    public NavMeshAgent agent;
 
     // Patrol variables
     [SerializeField] public List<Transform> wayPoints;  // Waypoints for the patrol
@@ -58,7 +59,8 @@ public class EnemyController : MonoBehaviour, IPunObservable
         {
             navMeshAgent.enabled = false; // Disable NavMeshAgent on non-master clients
         }
-
+        agent.updatePosition = false;
+        agent.updateRotation = false;
     }
 
     private void Update()
