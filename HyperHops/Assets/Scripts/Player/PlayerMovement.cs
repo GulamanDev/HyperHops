@@ -144,7 +144,7 @@ public class PlayerMovement : MonoBehaviourPun
             {
                 if (!isGrounded)
                 {
-                    Debug.Log("Landed");
+                    //Debug.Log("Landed");
                     doubleJump = false;
                     am.SetBool("isGrounded", true);
                     am.SetBool("isFalling", false);
@@ -171,7 +171,7 @@ public class PlayerMovement : MonoBehaviourPun
             if (IsGrounded())
             {
 
-                Debug.Log("Jump");
+                //Debug.Log("Jump");
                 PerformJump();
                 am.SetBool("isJumping", true);
                 isJumping = true;
@@ -179,7 +179,7 @@ public class PlayerMovement : MonoBehaviourPun
             }
             else if (!doubleJump)
             {
-                Debug.Log("Second Jump Working");
+                //Debug.Log("Second Jump Working");
                 PerformJump();
                 am.SetBool("isDoubleJumping", true);
                 isDoubleJumping = true;
@@ -240,7 +240,7 @@ public class PlayerMovement : MonoBehaviourPun
 
 
         rb.useGravity = false;
-        Debug.Log("DASHING");
+        //Debug.Log("DASHING");
         rb.velocity = dashDirection * dashPower;
 
         if (trailRenderer != null)

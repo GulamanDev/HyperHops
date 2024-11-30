@@ -1,5 +1,8 @@
 using UnityEngine;
 using Photon.Pun;
+using UnityEngine.AI;
+using System.Collections.Generic;
+using TMPro.Examples;
 
 public class EnemyController : MonoBehaviour
 {
@@ -34,11 +37,19 @@ public class EnemyController : MonoBehaviour
     // Flip variables
     private bool isFacingRight = true;
 
+    // Patrol variables
+    [SerializeField] public List<Transform> wayPoints;  // Waypoints for the patrol
+    private int currentWaypointIndex = 0;  // The current waypoint index
+
+    // NavMesh Agent reference
+    private NavMeshAgent navMeshAgent;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         am = GetComponent<Animator>();
+        navMeshAgent = GetComponent<NavMeshAgent>();
+        navMeshAgent.angularSpeed = 0f;
     }
 
     private void Update()
@@ -107,105 +118,180 @@ public class EnemyController : MonoBehaviour
 
     private void Roam()
     {
+        if (wayPoints.Count == 0) return;
 
-        // Random roaming behavior (can also use predefined points if needed)
-        float roamSpeed = speed * 0.5f;  // Slower roaming speed
+        Transform targetWaypoint = wayPoints[currentWaypointIndex];
+        navMeshAgent.SetDestination(targetWaypoint.position);
 
-        Vector3 forwardMovement = new Vector3(transform.forward.x, 0, 0) * roamSpeed * Time.deltaTime; 
-        transform.Translate(forwardMovement, Space.Self);
-
+        if (Vector3.Distance(transform.position, targetWaypoint.position) <= 1f || !navMeshAgent.pathPending && navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance)
+        {
+            currentWaypointIndex = (currentWaypointIndex + 1) % wayPoints.Count;
+        }
 
         // Check if the player is within detection range
         if (Vector3.Distance(transform.position, player.position) < detectionRange)
         {
-            currentState = State.Chase;
-
+            // Stop the NavMeshAgent if the player is in range
+            Stop(speed);
+            Debug.Log("NavMeshAgent stopped: " + navMeshAgent.isStopped);
+            currentState = State.Chase;  // Switch to Chase state
         }
-
-
+        else
+        {
+            // Resume NavMeshAgent if the player is out of detection range
+            if (navMeshAgent.isStopped)
+            {
+                Move(speed);
+                navMeshAgent.SetDestination(wayPoints[currentWaypointIndex].position);  // Resume roaming
+            }
+        }
 
         Flip();
     }
 
-    private void IsFalling()
+    private void Flip()
     {
-        // Check if the character is falling (y velocity is negative)
-        if (rb.velocity.y < 0)
+        // Flip the character when it changes direction based on the NavMeshAgent's velocity
+        if (navMeshAgent.velocity.x > 0 && !isFacingRight)
         {
-            Debug.Log("FALLING");
-            am.SetBool("isFalling", true);
-            am.SetBool("isJumping", false);
-            am.SetBool("isGrounded", false);
-            am.SetBool("isMoving", false);
-            isGrounded = false;
+            isFacingRight = true;
+            Vector3 scale = transform.localScale;
+            scale.x = Mathf.Abs(scale.x);  // Ensure the scale is positive (facing right)
+            transform.localScale = scale;
+        }
+        else if (navMeshAgent.velocity.x < 0 && isFacingRight)
+        {
+            isFacingRight = false;
+            Vector3 scale = transform.localScale;
+            scale.x = -Mathf.Abs(scale.x);  // Flip the scale for leftward facing
+            transform.localScale = scale;
+        }
+    }
+    private float outOfRangeTimer = 0f;  // Timer to track how long the player has been out of range
+    private float outOfRangeDelay = 0.4f;  // Delay before switching back to Roam state
+
+    private void Chase()
+    {
+        // Create a raycast from the enemy's position to the player's position
+        Vector3 rayDirection = (player.position - transform.position).normalized;
+
+        rayDirection.y = 0;  // Only care about the X and Z axis
+        rayDirection.z = 0;
+
+        // Cast a ray in the X-axis direction
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, rayDirection, out hit, detectionRange))
+        {
+            // If the ray hits the player and the distance to the player is within range
+            if (hit.transform.CompareTag("Player"))
+            {
+                navMeshAgent.SetDestination(player.position);  // Continue chasing the player
+
+                // Reset outOfRangeTimer when the player is detected
+                outOfRangeTimer = 0f;
+
+                // If within attack range, switch to attack state
+                if (Vector3.Distance(transform.position, player.position) < attackRange)
+                {
+                    //Stop(speed);
+                    rb.velocity = Vector3.zero;
+                    currentState = State.Attack;  // Switch to attack state
+                    Debug.Log("Attacking player");
+                }
+            }
         }
         else
         {
-            am.SetBool("isFalling", false);
-            am.SetBool("isGrounded", true);
+            // If the player is out of range, start counting time
+            outOfRangeTimer += Time.deltaTime;
+
+            // If the player has been out of range for 0.4 seconds, switch to Roam state
+            if (outOfRangeTimer >= outOfRangeDelay)
+            {
+                ResumeNavMeshAgent();  // Switch back to roaming
+            }
         }
 
-    }
-    private void Chase()
-    {
-        // Move towards the player
-        Vector3 direction = (player.position - transform.position).normalized;
-
-        direction.z = 0; // no movement z axis
-        transform.Translate(direction * speed * Time.deltaTime, Space.World);
-
+        // Set animation for movement
         am.SetBool("isMoving", true);
         am.SetBool("isGrounded", false);
         isMoving = true;
 
+        // Flip the character's direction based on movement
         Flip();
-        // Check if the enemy is close enough to attack (within attack range)
-        if (Vector3.Distance(transform.position, player.position) < attackRange)
-        {
-            rb.velocity = Vector3.zero; 
-            currentState = State.Attack; 
-        }
-        else if (Vector3.Distance(transform.position, player.position) > detectionRange)
-        {
-            currentState = State.Roam; 
-        }
     }
 
-    private void Attack()
+    private void IsFalling()
+{
+    // Check if the character is falling (y velocity is negative)
+    if (rb.velocity.y < 0)
     {
-        // If the enemy is in attack range and is not already jumping or stomping
-        if (!isJumping && !isStomping)
-        {
-            JumpOnPlayer();
-            am.SetBool("isJumping", true);
-            am.SetBool("isGrounded", false);
-            am.SetBool("isMoving", false);
-            isGrounded= false;
-        }
-        if (IsGrounded())
-        {
-            am.SetBool("isMoving", true);         
-            am.SetBool("isJumping", false);
+        //Debug.Log("FALLING");
+        am.SetBool("isFalling", true);
+        am.SetBool("isJumping", false);
+        am.SetBool("isGrounded", false);
+        am.SetBool("isMoving", false);
+        isGrounded = false;
+    }
+    else
+    {
+        am.SetBool("isFalling", false);
+        am.SetBool("isGrounded", true);
+    }
+}
+private void Attack()
+{
 
-        }
+    // If the enemy is in attack range and is not already jumping or stomping
+    if (!isJumping && !isStomping)
+    {
+        isJumping = true;
+        Stop(speed);
+        Debug.Log("Is Jumping: " + isJumping);
+        EnemyJump();
+        am.SetBool("isJumping", true); 
+        am.SetBool("isGrounded", false); 
+        am.SetBool("isMoving", false); 
 
-        // Check if the player is directly below the enemy
-        if (isJumping && IsDirectlyAbovePlayer())
+            
+    }
+
+    // If the enemy is grounded (i.e., the jump finished), reset the animation and restart NavMeshAgent
+    if (IsGrounded())
+    {
+        am.SetBool("isMoving", true); 
+        am.SetBool("isJumping", false); 
+        if (!navMeshAgent.isStopped)
         {
-            PerformStomp(); 
-            am.SetBool("isStomping", true);
-            am.SetBool("isJumping", false);
-            am.SetBool("isFalling", false);
-            am.SetBool("isGrounded", false);
-            isStomping = true;
-        }
-        else
-        {
-            am.SetBool("isStomping", false);
-            am.SetBool("isMoving", true);
-            isStomping = false;
+            
+            if (currentState == State.Chase)
+            {
+                navMeshAgent.SetDestination(player.position);  // Resume chasing player
+            }
+            else if (currentState == State.Roam)
+            {
+                navMeshAgent.SetDestination(wayPoints[currentWaypointIndex].position);  // Resume roaming
+            }
         }
     }
+
+    // If the enemy is directly above the player and still in the air, perform the stomp
+    if (isJumping && IsDirectlyAbovePlayer())
+    {
+        PerformStomp(); 
+        am.SetBool("isStomping", true); 
+        am.SetBool("isJumping", false);  
+        am.SetBool("isFalling", false);  
+        am.SetBool("isGrounded", false); 
+        isStomping = true;  
+    }
+    else
+    {
+        am.SetBool("isStomping", false);  
+        am.SetBool("isMoving", true);  
+        isStomping = false; 
+    }
+}
 
     private void Flee()
     {
@@ -219,19 +305,65 @@ public class EnemyController : MonoBehaviour
             currentState = State.Roam;
         }
     }
-
-    private void JumpOnPlayer()
+    private void EnemyJump()
     {
-        isJumping = true;  // Set the enemy as jumping
-        timeSinceLastJumpAttack = 0f;  // Resets Jump Attack
+        if(isJumping)
+        {
+            Debug.Log("Already Jumping!"); 
+            Vector3 directionToPlayer = (player.position - transform.position).normalized;
+            rb.velocity = new Vector3(directionToPlayer.x * speed, jumpForce, directionToPlayer.z * speed);
+        }
 
-        // Calculate direction to the player
-        Vector3 directionToPlayer = (player.position - transform.position).normalized;
-
-        // Apply a force to jump upwards and towards the player
-        rb.velocity = new Vector3(directionToPlayer.x * speed, jumpForce, directionToPlayer.z * speed);
+        Debug.Log("EnemyJUMP" + rb.velocity);
+    }
 
 
+private bool IsGrounded()
+{
+    // Simple ground check using a raycast to detect if the enemy is grounded
+    Vector3 rayOrigin = transform.position - new Vector3(0, 0.5f, 0);  // Just below the character
+    Vector3 rayDirection = Vector3.down;
+    float rayLength = 0.5f;  // Length of the raycast
+
+    // Raycast to detect ground
+    if (Physics.Raycast(rayOrigin, rayDirection, rayLength))
+    {
+        {
+            Debug.Log("GROUNDED");
+            isJumping = false;
+            am.SetBool("isJumping", false);  // Stop jump animation
+            am.SetBool("isGrounded", true);  // Mark as grounded
+            return true;  // The enemy is grounded now
+        }
+    }
+
+    return false;  // The enemy is still in the air
+}
+
+    private void ResumeNavMeshAgent()
+    {
+        // Re-enable the NavMeshAgent and resume pathfinding after landing
+        Move(speed);
+
+        // Set the destination if chasing or roaming
+        if (currentState == State.Chase)
+        {
+            navMeshAgent.SetDestination(player.position);  // Resume chasing the player
+        }
+        else if (currentState == State.Roam)
+        {
+            navMeshAgent.SetDestination(wayPoints[currentWaypointIndex].position);  // Resume roaming
+        }
+    }
+    private void Stop(float speed)
+    {
+        navMeshAgent.isStopped =true;
+        navMeshAgent.speed = 0f;
+    }
+    private void Move(float speed)
+    {
+        navMeshAgent.isStopped = false;
+        navMeshAgent.speed = speed;
     }
 
     private bool IsDirectlyAbovePlayer()
@@ -262,48 +394,8 @@ public class EnemyController : MonoBehaviour
         }
     
     }
-    private bool IsGrounded()
-    {
-        Debug.Log("Detects the ground ");
 
-        // Set the raycast origin just below the enemy's position (use the collider's bounds center minus half the height)
-        Vector3 rayOrigin = transform.position - new Vector3(0, 0.5f, 0);  // Adjust to cast just below the enemy
-        Vector3 rayDirection = Vector3.down;
 
-        // Length of the raycast
-        float rayLength = 0.5f;
-
-        // Draw the ray in the Scene view in red (for debugging)
-        Debug.DrawRay(rayOrigin, rayDirection * rayLength, Color.red);
-
-        // If the enemy is jumping, return false to prevent false ground detection while in the air
-        if (isJumping || isStomping)
-        {
-            return false;
-        }
-
-        // Simple ground check using raycasting
-        return Physics.Raycast(rayOrigin, rayDirection, rayLength);
-    }
-
-    private void Flip()
-    {
-        // Flip the character when it changes direction
-        if (rb.velocity.x > 0 && !isFacingRight)
-        {
-            isFacingRight = true;
-            Vector3 scale = transform.localScale;
-            scale.x *= -1;
-            transform.localScale = scale;
-        }
-        else if (rb.velocity.x < 0 && isFacingRight)
-        {
-            isFacingRight = false;
-            Vector3 scale = transform.localScale;
-            scale.x *= -1;
-            transform.localScale = scale;
-        }
-    }
 
     public static void SpawnEnemy(Vector3 position)
     {
